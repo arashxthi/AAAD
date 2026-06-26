@@ -1,0 +1,40 @@
+name: Build Modded AAAD APK
+
+on:
+  workflow_dispatch: # به شما اجازه می‌دهد دسترسی اجرای دستی (دکمه Run) را داشته باشید
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # مرحله جادویی: تغییر کدها قبل از کامپایل
+    - name: Modify License & Limits
+      run: |
+        echo "Modifying source code to bypass license checker..."
+        # با دستور زیر تمام فایل‌های کاتلین را می‌گردیم و هرجا تابع بررسی پرمیوم یا لایسنس باشد را تغییر می‌دهیم تا همیشه true برگرداند.
+        # نکته: این دو خط پایین فرضی هستند و باید بر اساس نام دقیق متغیرها در سورس‌کد AAAD (مثلاً در Billing یا Utils) تنظیم شوند.
+        find . -type f -name "*.kt" -exec sed -i 's/isPremium = false/isPremium = true/g' {} +
+        find . -type f -name "*.kt" -exec sed -i 's/hasActiveLicense() {/hasActiveLicense() { return true;/g' {} +
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant Execute Permission for Gradle
+      run: chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AAAD-Modded-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
